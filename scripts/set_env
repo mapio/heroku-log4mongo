@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License along with
 # "free-logging". If not, see <http://www.gnu.org/licenses/>.
 
-export MONGOLAB_URI
+export MONGOLAB_URI VERSION
 heroku config -s | grep 'MONGOLAB_URI' > .env
+echo VERSION=developement >> .env
 source .env
-export VERSION=developement

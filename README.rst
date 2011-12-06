@@ -7,105 +7,111 @@ heroku-log4mongo
 
 |flattr| 
 
-`heroku-log4mongo` is an hack to obain 240Mb of free cloud logging for your
-Heroku apps, it's (a very rough, no fancy interface, no fun) *free version* of
-`Loggly <http://addons.heroku.com/loggly>`_ service, but with indefinite *data
+``heroku-log4mongo`` is a demo application showing an hack to obtain 240MB of
+free cloud logging for your `Heroku <http://www.heroku.com/>`_ apps, that is a
+(very rough, no fancy interface, no fun) *free version* of the `Loggly
+<http://addons.heroku.com/loggly>`_ addon, but with indefinite *data
 retention*.
 
-First of all you need to setup your Heroku environment as usual::
+The key is the `log4mongo <http://github.com/log4mongo/log4mongo-python>`_
+library that very easily allows you to use `mongodb
+<http://www.mongodb.org/>`_ as a logging endopint, plus the (free) `mongolab
+<http://mongolab.com/>`_ service, offering (for free) a 240MB database (with a
+nice web interface); this demo applicaton is based on `Flask
+<http://flask.pocoo.org/>`_ but every other framework will work (albeit being
+less pleasurable to program).
 
-  $ git init
+The following part of this README describes how to use the demo application
+(locally and on Heroku), for more details on how the code works and the idea
+behind it, please check the `blog post
+<http://santini.dsi.unimi.it/extras/ph/logging-in-the-cloud-for-free-on-heroku-and-mongolab.html>`_ on my `ProcrastinHacking
+<http://santini.dsi.unimi.it/extras/ph/>`_ blog.
+
+
+Prepare the Heroku environment
+------------------------------
+
+To test this application, setup your Heroku environment as usual (assuming
+that the ``heroku`` and ``foreman`` gems are installed)::
+
+  $ git clone git://github.com/mapio/heroku-log4mongo.git
   $ heroku create --stack cedar
 
-In the example of this repo we'll now use `Flask <http://flask.pocoo.org/>`_
-to setup a minimalistic app, every other framework will do (albeit being less
-a pleasure to use – I admit loving Flask).
-
-In particular, you need to have at least these lines in your
-`requirements.txt` file::
-
-  gunicorn
-  log4mongo
-
-plus, of course, Flask and other packages your app depends upon.
-
-The key here is the very nice `log4mongo
-<https://github.com/log4mongo/log4mongo-python>`_ library that very easily
-allows you to use a (free) `mongolab <https://mongolab.com/home>`_ databse as
-a logging endpoint.
-
-Now install the packages locally (after creating a suitable `virtualenv
-<http://pypi.python.org/pypi/virtualenv>`_ with `virtualenvwrapper
-<http://www.doughellmann.com/projects/virtualenvwrapper/>`_)::
-
-  $ mkvirtualenv heroku-log4mongo
-  $ pip install -r requirements.txt
-
-Now add the *free* `mongolab:starter` addon to your Heroku app::
+then add to it the *free* `mongolab:starter` addon to your app and set the
+``VERSION``::
 
   $ heroku addons:add mongolab:starter
+  $ heroku config:add VERSION=production
 
-that will give you 240Mb
+that will give you a 240MB `mongodb <http://www.mongodb.org/>`_ freely hosted
+in the cloud (the app uses ``VERSION`` to distinguish between the locally run
+test from the actual heroku deployed app). As easy as pie!
 
-To use it locally, for testing purposes, you need to obtain the URL of the
-just created db, you can get it with:
+
+Test locally
+------------
+
+You can now setup a loccal testing environment using `virtualenvwrapper
+<http://www.doughellmann.com/projects/virtualenvwrapper/>`_)::
+
+  $ mktmpenv; cd -
+  $ pip install -r requirements.txt
+
+to use the app locally you need to setup the local ``.env`` file used by
+``foreman`` to configure your app, in particular you need to store in it the
+URI of your databse, and the ``VERSION`` of the application with::
 
   $ heroku config -s | grep 'MONGOLAB_URI' > .env
+  $ echo 'VERSION=developement' >> .env
 
-that will save it in `.env` file so that `foreman
-<https://github.com/ddollar/foreman>`_ will pick it up when running your
-application locally (as will Heroku do on their side to run your app).
+You are now ready to test locally: run the app and access its home with
+``curl``::
 
-Now, to use the databse with log4mongo a bit of effort is needed since URI are
-not directlly supported; but it's enough to use standard library tools:
+  $ foreman start -p 8000
+  22:13:02 web.1     | started with pid 22744
+  22:13:02 web.1     | 2011-12-06 22:13:02 [22745] [INFO] Starting gunicorn 0.13.4
+  22:13:02 web.1     | 2011-12-06 22:13:02 [22745] [INFO] Listening at: http://0.0.0.0:8000 (22745)
+  22:13:02 web.1     | 2011-12-06 22:13:02 [22745] [INFO] Using worker: sync
+  22:13:02 web.1     | 2011-12-06 22:13:02 [22746] [INFO] Booting worker with pid: 22746
+  $ curl http://0.0.0.0:8000
+  Hello, world!
+  22:09:53 web.1     | 2011.12:06 22:09:53 [22691] [DEBUG/APPLICATION] This is an application log message
+  22:09:53 web.1     | 2011.12:06 22:09:53 [22691] [INFO/ACCESS] 127.0.0.1 - - [06/Dec/2011:22:09:53] "GET / HTTP/1.1" 200 13 "-" "curl/7.21.4 (universal-apple-darwin11.0) libcurl/7.21.4 OpenSSL/0.9.8r zlib/1.2.5"
 
-    from os import environ
-    from urlparse import urlparse
-    
-    MONGOLAB_URI_PARSED = urlparse( environ[ 'MONGOLAB_URI' ] )
-    MONGOLAB_CONF_DICT = dict( 
-        host = MONGOLAB_URI_PARSED.hostname, 
-        port = MONGOLAB_URI_PARSED.port, 
-        database_name = MONGOLAB_URI_PARSED.path[ 1: ],
-        username = MONGOLAB_URI_PARSED.username, 
-        password = MONGOLAB_URI_PARSED.password
-    )
+the first output lines being the normal app startup, followed by ``curl``
+output, then a *log message coming from the application*, and finally a
+typical *access log* message.
 
-Now, you can configure a logger to use mongolab in a breeze
 
-    from logging import getLogger, DEBUG
-    from log4mongo.handlers import MongoHandler
-    
-    logger = getLogger( name )
-    logger.addHandler( MongoHandler( level = DEBUG, collection = 'application-log', **MONGOLAB_CONF_DICT ) )
+Deploy
+------
 
-and your log messages to `logger` will go to your mongolab db.
+You are now ready to try the application in production::
 
-You can also trick gunicorn to send to mongolab db its access and error logs.
-To do this you need to put the following in your `Procfile`::
+  $ git push heroku master
+  $ heroku scale web=1
+  $ curl http://<YOUR_APP>.herokuapp.com/
 
-  web: gunicorn fl:app --logger-class=<MONGO_LOGGER> --access-logfile=/dev/null --error-logfile=- -w 3 -b "0.0.0.0:$PORT"
+where ``<YOUR_APP>`` is the app name you got as output of the ``heroku
+create`` command above. You can now get your logs from the cloud, for instance
+using the simple ``get_logs`` script::
 
-(it's important to define the `access-logile` option, otherwise the
-configuration will not setup the needed handlers), where `<MONGO_LOGGER>` is
-the name of a logging class similar to this one::
+  $ export MONGOLAB_URI 
+  $ source .env
+  $ ./scripts/get_logs
+  2.230.67.34 - - [06/Dec/2011:21:19:08] "GET / HTTP/1.1" 200 13 "-" "curl/7.21.4 (universal-apple-darwin11.0) libcurl/7.21.4 OpenSSL/0.9.8r zlib/1.2.5"
+  $ ./scripts/get_logs -e
+  2011-12-06 21:15:19+00:00 Starting gunicorn 0.13.4
+  2011-12-06 21:15:19+00:00 Listening at: http://0.0.0.0:32652 (3)
+  2011-12-06 21:15:19+00:00 Using worker: sync
+  2011-12-06 21:15:19+00:00 Booting worker with pid: 10
+  $  ./scripts/get_logs -a
+  2011-12-06 21:19:08+00:00 This is an application log message
 
-  from gunicorn.glogging import Logger
-  from log4mongo.handlers import MongoHandler, MongoFormatter
-  
-  class GunicornLogger( Logger ):
-    def __init__( self, cfg ):
-        super( GunicornLogger, self ).__init__( cfg )
-        access_handler = MongoHandler( level = INFO, collection = 'access-log', **MONGOLAB_CONF_DICT )
-        error_handler = MongoHandler( level = INFO, collection = 'error-log', **MONGOLAB_CONF_DICT )
-        access_handler.setFormatter( MongoFormatter() )
-        error_handler.setFormatter( MongoFormatter() )
-        self.error_log.addHandler( error_handler )
-        self.error_log.setLevel( INFO )
-        access_handler = StreamHandler()
-        access_handler.setFormatter( Formatter( '%(asctime)s [%(process)d] [%(levelname)s/ACCESS] %(message)s', '%Y.%m:%d %H:%M:%S' ) )
-        self.access_log.addHandler( access_handler )
-        self.access_log.setLevel( INFO )
+which will respectively output yuor *access log*, *error log* and *application log*.
 
-You can also configure logging to depend on the `VERSION` of the application,
-by making local loggin to standard output, and the production one to mongolab.
+The steps of setting up ``.env`` and sourcing it can be convenienty obtained by::
+
+  $ source ./scripts/set_env
+
+that will prepare the file, export the variables and source it.
