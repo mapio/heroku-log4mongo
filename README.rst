@@ -7,19 +7,30 @@ heroku-log4mongo
 
 |flattr| 
 
-``heroku-log4mongo`` is a demo application showing an hack to obtain 240MB of
-free cloud logging for your `Heroku <http://www.heroku.com/>`_ apps, that is a
-(very rough, no fancy interface, no fun) *free version* of the `Loggly
-<http://addons.heroku.com/loggly>`_ addon, but with indefinite *data
-retention*.
+``heroku-log4mongo`` is a demo application showing how to obtain 240MB of free
+cloud logging in a `mongodb <http://www.mongodb.org/>`_ for your `Heroku
+<http://www.heroku.com/>`_ deployments -- a sort of (very rough) *free
+version* of the `Loggly <http://addons.heroku.com/loggly>`_ addon, but with
+indefinite *data retention*.
 
-The key is the `log4mongo <http://github.com/log4mongo/log4mongo-python>`_
-library that very easily allows you to use `mongodb
-<http://www.mongodb.org/>`_ as a logging endopint, plus the (free) `mongolab
-<http://mongolab.com/>`_ service, offering (for free) a 240MB database (with a
-nice web interface); this demo applicaton is based on `Flask
-<http://flask.pocoo.org/>`_ but every other framework will work (albeit being
-less pleasurable to program).
+To `use mongodb for logging
+<http://blog.mongodb.org/post/172254834/mongodb-is-fantastic-for-logging>`_ is
+not a new idea; the (I think original and nice) contribution of this sample
+code is to emphasize:
+
+* the very nice `log4mongo <http://github.com/log4mongo/log4mongo-python>`_
+  library making all this pretty easy,
+
+* the awsome `mongolab <http://mongolab.com/>`_ service, offering *for free* a
+  240MB database in the cloud (with a nice web interface);
+
+* a nice hack to make `gunicorn <http://gunicorn.org/>`_ send its *access
+  log* to the cloud,
+
+* lasts but not least, how Heroku makes all this quite a piece of cake!
+
+This demo applicaton is based on `Flask <http://flask.pocoo.org/>`_ but every
+other framework will work (albeit being less pleasurable to program).
 
 The following part of this README describes how to use the demo application
 (locally and on Heroku), for more details on how the code works and the idea
@@ -28,8 +39,8 @@ behind it, please check the `blog post
 <http://santini.dsi.unimi.it/extras/ph/>`_ blog.
 
 
-Prepare the Heroku environment
-------------------------------
+Setup Heroku and mongolab
+-------------------------
 
 To test this application, setup your Heroku environment as usual (assuming
 that the ``heroku`` and ``foreman`` gems are installed)::
@@ -43,16 +54,16 @@ then add to it the *free* `mongolab:starter` addon to your app and set the
   $ heroku addons:add mongolab:starter
   $ heroku config:add VERSION=production
 
-that will give you a 240MB `mongodb <http://www.mongodb.org/>`_ freely hosted
-in the cloud (the app uses ``VERSION`` to distinguish between the locally run
-test from the actual heroku deployed app). As easy as pie!
+that will give you a 240MB mongodb hosted in the cloud for free, as easy as
+pie! The ``VERSION`` variable is used to distinguish between the local and
+deployed versions of the application.
 
 
 Test locally
 ------------
 
 You can now setup a loccal testing environment using `virtualenvwrapper
-<http://www.doughellmann.com/projects/virtualenvwrapper/>`_)::
+<http://www.doughellmann.com/projects/virtualenvwrapper/>`_::
 
   $ mktmpenv; cd -
   $ pip install -r requirements.txt
@@ -64,8 +75,8 @@ URI of your databse, and the ``VERSION`` of the application with::
   $ heroku config -s | grep 'MONGOLAB_URI' > .env
   $ echo 'VERSION=developement' >> .env
 
-You are now ready to test locally: run the app and access its home with
-``curl``::
+(or conveniently use the ``./scripts/set_env`` script). You are now ready to
+test locally: run the app and access its home with ``curl``::
 
   $ foreman start -p 8000
   22:13:02 web.1     | started with pid 22744
@@ -94,12 +105,10 @@ You are now ready to try the application in production::
 
 where ``<YOUR_APP>`` is the app name you got as output of the ``heroku
 create`` command above. You can now get your logs from the cloud, for instance
-using the simple ``get_logs`` script::
+using the simple provided script::
 
-  $ export MONGOLAB_URI 
-  $ source .env
   $ ./scripts/get_logs
-  2.230.67.34 - - [06/Dec/2011:21:19:08] "GET / HTTP/1.1" 200 13 "-" "curl/7.21.4 (universal-apple-darwin11.0) libcurl/7.21.4 OpenSSL/0.9.8r zlib/1.2.5"
+  4.231.57.32 - - [06/Dec/2011:21:19:08] "GET / HTTP/1.1" 200 13 "-" "curl/7.21.4 (universal-apple-darwin11.0) libcurl/7.21.4 OpenSSL/0.9.8r zlib/1.2.5"
   $ ./scripts/get_logs -e
   2011-12-06 21:15:19+00:00 Starting gunicorn 0.13.4
   2011-12-06 21:15:19+00:00 Listening at: http://0.0.0.0:32652 (3)
@@ -108,10 +117,18 @@ using the simple ``get_logs`` script::
   $  ./scripts/get_logs -a
   2011-12-06 21:19:08+00:00 This is an application log message
 
-which will respectively output yuor *access log*, *error log* and *application log*.
+which will respectively output yuor *access log*, *error log* and *application
+log*, or you can access the nice web interface provided by the addon with::
 
-The steps of setting up ``.env`` and sourcing it can be convenienty obtained by::
+  $ heroku addons:open mongolab:starter
 
-  $ source ./scripts/set_env
+When you are down playing with this, don't forget to **scale down**::
 
-that will prepare the file, export the variables and source it.
+  $ heroku scale web=0
+
+not to incur in unanticipated costs!
+
+If you plan to use this in a real production application consider `capped
+collections <http://www.mongodb.org/display/DOCS/Capped+Collections>`_ (a very
+high performance auto-FIFO database) as a simple way of controlling the size of
+your logs.

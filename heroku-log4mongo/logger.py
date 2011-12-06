@@ -16,7 +16,7 @@
 # "free-logging". If not, see <http://www.gnu.org/licenses/>.
 
 from logging import INFO, getLogger, StreamHandler, Formatter, DEBUG, INFO
-from os import environ as ENV
+from os import environ
 from urlparse import urlparse
 
 from gunicorn.glogging import Logger
@@ -25,7 +25,7 @@ from log4mongo.handlers import MongoHandler, MongoFormatter
 
 # parse the MONGOLAB_URI environment variable to get the auth/db info
 
-MONGOLAB_URI_PARSED = urlparse( ENV[ 'MONGOLAB_URI' ] )
+MONGOLAB_URI_PARSED = urlparse( environ[ 'MONGOLAB_URI' ] )
 MONGOLAB_CONF_DICT = dict( 
 	host = MONGOLAB_URI_PARSED.hostname, 
 	port = MONGOLAB_URI_PARSED.port, 
@@ -36,7 +36,7 @@ MONGOLAB_CONF_DICT = dict(
 
 # determine if we are running in production (e.g., on Heroku), or locally
 
-PRODUCTION = ENV[ 'VERSION' ] == 'production'
+PRODUCTION = environ[ 'VERSION' ] == 'production'
 
 
 # setup the root logger so that application logs go to mongolab
