@@ -3,7 +3,7 @@ heroku-log4mongo
 
 .. |flattr| image:: http://api.flattr.com/button/flattr-badge-large.png
   :alt: Flattr this git repo
-  :target: https://flattr.com/submit/auto?user_id=mapio&url=https://github.com/mapio/heroku-log4mongo&title=heroku-log4mongo&language=en_GB&tags=github&category=software
+  :target: http://flattr.com/thing/448158/heroku-log4mongo
 
 |flattr| 
 
