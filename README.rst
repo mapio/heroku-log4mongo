@@ -59,25 +59,25 @@ application locally (as will Heroku do on their side to run your app).
 Now, to use the databse with log4mongo a bit of effort is needed since URI are
 not directlly supported; but it's enough to use standard library tools:
 
-	from os import environ
-	from urlparse import urlparse
-	
-	MONGOLAB_URI_PARSED = urlparse( environ[ 'MONGOLAB_URI' ] )
-	MONGOLAB_CONF_DICT = dict( 
-		host = MONGOLAB_URI_PARSED.hostname, 
-		port = MONGOLAB_URI_PARSED.port, 
-		database_name = MONGOLAB_URI_PARSED.path[ 1: ],
-		username = MONGOLAB_URI_PARSED.username, 
-		password = MONGOLAB_URI_PARSED.password
-	)
+    from os import environ
+    from urlparse import urlparse
+    
+    MONGOLAB_URI_PARSED = urlparse( environ[ 'MONGOLAB_URI' ] )
+    MONGOLAB_CONF_DICT = dict( 
+        host = MONGOLAB_URI_PARSED.hostname, 
+        port = MONGOLAB_URI_PARSED.port, 
+        database_name = MONGOLAB_URI_PARSED.path[ 1: ],
+        username = MONGOLAB_URI_PARSED.username, 
+        password = MONGOLAB_URI_PARSED.password
+    )
 
 Now, you can configure a logger to use mongolab in a breeze
 
-	from logging import getLogger, DEBUG
-	from log4mongo.handlers import MongoHandler
-	
-	logger = getLogger( name )
-	logger.addHandler( MongoHandler( level = DEBUG, collection = 'application-log', **MONGOLAB_CONF_DICT ) )
+    from logging import getLogger, DEBUG
+    from log4mongo.handlers import MongoHandler
+    
+    logger = getLogger( name )
+    logger.addHandler( MongoHandler( level = DEBUG, collection = 'application-log', **MONGOLAB_CONF_DICT ) )
 
 and your log messages to `logger` will go to your mongolab db.
 
@@ -94,18 +94,18 @@ the name of a logging class similar to this one::
   from log4mongo.handlers import MongoHandler, MongoFormatter
   
   class GunicornLogger( Logger ):
-  	def __init__( self, cfg ):
-  		super( GunicornLogger, self ).__init__( cfg )
-  		access_handler = MongoHandler( level = INFO, collection = 'access-log', **MONGOLAB_CONF_DICT )
-  		error_handler = MongoHandler( level = INFO, collection = 'error-log', **MONGOLAB_CONF_DICT )
-  		access_handler.setFormatter( MongoFormatter() )
-  		error_handler.setFormatter( MongoFormatter() )
-  		self.error_log.addHandler( error_handler )
-  		self.error_log.setLevel( INFO )
-  		access_handler = StreamHandler()
-  		access_handler.setFormatter( Formatter( '%(asctime)s [%(process)d] [%(levelname)s/ACCESS] %(message)s', '%Y.%m:%d %H:%M:%S' ) )
-  		self.access_log.addHandler( access_handler )
-  		self.access_log.setLevel( INFO )
+    def __init__( self, cfg ):
+        super( GunicornLogger, self ).__init__( cfg )
+        access_handler = MongoHandler( level = INFO, collection = 'access-log', **MONGOLAB_CONF_DICT )
+        error_handler = MongoHandler( level = INFO, collection = 'error-log', **MONGOLAB_CONF_DICT )
+        access_handler.setFormatter( MongoFormatter() )
+        error_handler.setFormatter( MongoFormatter() )
+        self.error_log.addHandler( error_handler )
+        self.error_log.setLevel( INFO )
+        access_handler = StreamHandler()
+        access_handler.setFormatter( Formatter( '%(asctime)s [%(process)d] [%(levelname)s/ACCESS] %(message)s', '%Y.%m:%d %H:%M:%S' ) )
+        self.access_log.addHandler( access_handler )
+        self.access_log.setLevel( INFO )
 
 You can also configure logging to depend on the `VERSION` of the application,
 by making local loggin to standard output, and the production one to mongolab.
