@@ -18,8 +18,9 @@ To `use mongodb for logging
 not a new idea; the (I think original and nice) contribution of this sample
 code is to emphasize:
 
-* the very nice `log4mongo <http://github.com/log4mongo/log4mongo-python>`_
-  library making all this pretty easy,
+* the very nice `log4mongo-python
+  <http://github.com/log4mongo/log4mongo-python>`_ library making all this
+  pretty easy,
 
 * the awsome `mongolab <http://mongolab.com/>`_ service, offering *for free* a
   240MB database in the cloud (with a nice web interface);
@@ -35,7 +36,7 @@ other framework will work (albeit being less pleasurable to program).
 The following part of this README describes how to use the demo application
 (locally and on Heroku), for more details on how the code works and the idea
 behind it, please check the `blog post
-<http://santini.dsi.unimi.it/extras/ph/logging-in-the-cloud-for-free-on-heroku-and-mongolab.html>`_ on my `ProcrastinHacking
+<http://santini.dsi.unimi.it/extras/ph/logging-in-the-cloud-for-free-with-heroku-and-mongolab.html>`_ on my `ProcrastinHacking
 <http://santini.dsi.unimi.it/extras/ph/>`_ blog.
 
 
